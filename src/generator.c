@@ -483,6 +483,10 @@ int* getComponents(char* formula) {
 int calcDoubleBounds(const int* elementCounts) {
 
 
+
+
+
+
 	//total number of halogens in the input
 	int halogenSum = 0;
 	char halogens[5] = "BFIX";
@@ -497,7 +501,7 @@ int calcDoubleBounds(const int* elementCounts) {
 	int dbe = 0;
 
 	//check if negativeTerm is an int
-	if (negativeTerm == (int)negativeTerm) {
+	if (negativeTerm == (int)negativeTerm && elementCounts['H' - 65] > 0) {
 
 		dbe = elementCounts['C' - 65] + 1 - negativeTerm;
 	}
