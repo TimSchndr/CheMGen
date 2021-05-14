@@ -6,7 +6,7 @@
 #include "generator.h"
 
 // X stands for Chlorine
-// B stands for Brome, *not* Bor
+// B stands for Bromine, *not* Boron
 #define ORGANIC_SUBSET "BbCcFfHhIiNnOoPpSsXx"
 #define ELEMENTS "BCFHINOPSX"
 
