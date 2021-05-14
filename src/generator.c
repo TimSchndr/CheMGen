@@ -16,10 +16,13 @@ int atomValency[26] = { 0 };
 
 int* components;
 int numberOfAtoms;
+int* pAtoms = &numberOfAtoms;
 int numberOfBonds;
+int* pBonds = &numberOfBonds;
 char* atomName;
 
 int counter = 0;
+int* pCounter = &counter;
 
 //the graph properties
 //this is a symmetric Laplacian matrix
@@ -33,55 +36,61 @@ FILE* outputFile;
 */
 void main(int argc, char* argv[]) {
 
-	if (argc == 3) {
-
+	//if no file is specified, write to stdout
+	if (argc == 2) {
+		outputFile = stdout;
+	}
+	else if (argc == 3) {
 		outputFile = fopen(argv[2], "w");
-
-		if (outputFile) {
-
-			//get the components of the formula
-			components = getComponents(argv[1]);
-
-			//get the number of bonds
-			numberOfBonds = numberOfAtoms - 1 + calcDoubleBounds(components);
-
-			//define list of atoms
-			atomName = defineAtomName();
-
-			//write general data to file
-			writeData(argv[1]);
-
-			printf("number of atoms (non-H): %d\nnumber of bonds: %d\n", numberOfAtoms, numberOfBonds);
-
-			//allocation of adjacencyMatrix
-			adjacencyMatrix = calloc(numberOfAtoms * numberOfAtoms, sizeof(adjacencyMatrix));
-
-			if (adjacencyMatrix) {
-
-				//set valency of atoms
-				setAtomValency();
-				//start filling matrix
-				makeBond(0, 1, 0);
-
-			}
-			else {
-				fprintf(stderr, "Allocation failed for adjacencyMatrix in main().");
-				freeAll();
-				exit(0);
-			}
-
-			fclose(outputFile);
-
-			printf("number of valid graphs: %d\n", counter);
-		}
-		else {
-			fprintf(stderr, "Could not open the specified file.");
-			freeAll();
-			exit(0);
-		}
 	}
 	else {
 		fprintf(stderr, "Usage: generator <forumla> <outputFile>");
+	}
+
+	if (outputFile) {
+
+		//get the components of the formula
+		components = getComponents(argv[1]);
+
+		//get the number of bonds
+		numberOfBonds = *pAtoms - 1 + calcDoubleBounds(components);
+
+		//define list of atoms
+		atomName = defineAtomName();
+
+		printf("number of atoms (non-H): %d\nnumber of bonds: %d\n\n", *pAtoms, *pBonds);
+
+		//write general data to file
+		writeData(argv[1]);
+
+		//allocation of adjacencyMatrix
+		adjacencyMatrix = calloc(*pAtoms * *pAtoms, sizeof(adjacencyMatrix));
+
+		if (adjacencyMatrix) {
+
+			//set valency of atoms
+			setAtomValency();
+			//start filling matrix
+			makeBond(0, 1, 0);
+
+		}
+		else {
+			fprintf(stderr, "Allocation failed for adjacencyMatrix in main().");
+			freeAll();
+			exit(0);
+		}
+
+		//only if there was an output file close it
+		if (outputFile != stdout) {
+			fclose(outputFile);
+		}
+
+		printf("number of valid graphs: %d\n", *pCounter);
+	}
+	else {
+		fprintf(stderr, "Could not open the specified file.");
+		freeAll();
+		exit(0);
 	}
 }
 
@@ -127,7 +136,7 @@ int getAtomValency(char atom) {
 
 char* defineAtomName() {
 
-	char* atomList = calloc(numberOfAtoms + 1, sizeof(atomList));
+	char* atomList = calloc(*pAtoms + 1, sizeof(atomList));
 
 	if (atomList) {
 		int index = 0;
@@ -160,7 +169,7 @@ char* defineAtomName() {
 */
 int checkAtoms() {
 
-	for (int i = 0; i < numberOfAtoms; i++) {
+	for (int i = 0; i < *pAtoms; i++) {
 		if (matrix(i, i) > getAtomValency(atomName[i])) {
 			return FALSE;
 		}
@@ -178,7 +187,7 @@ int checkAtoms() {
 */
 void makeBond(int i, int j, int bondSum) {
 
-	if (numberOfBonds == bondSum) {
+	if (*pBonds == bondSum) {
 		// all bonds have been placed
 
 		if (checkAtoms()) {
@@ -199,7 +208,7 @@ void makeBond(int i, int j, int bondSum) {
 	}
 
 	//check if the end of the matrix is reached
-	if ((i * numberOfAtoms + j) >= (numberOfAtoms * numberOfAtoms)) {
+	if ((i * *pAtoms + j) >= (*pAtoms * *pAtoms)) {
 		return;
 	}
 
@@ -212,7 +221,7 @@ void makeBond(int i, int j, int bondSum) {
 		matrix(i, i) += b;
 		matrix(j, j) += b;
 
-		if (j < numberOfAtoms - 1) {
+		if (j < *pAtoms - 1) {
 			makeBond(i, j + 1, bondSum + b);
 		}
 		else {
@@ -233,8 +242,8 @@ void makeBond(int i, int j, int bondSum) {
 
 void saveGraph() {
 
-	for (int i = 0; i < numberOfAtoms; i++) {
-		for (int j = i + 1; j < numberOfAtoms; j++) {
+	for (int i = 0; i < *pAtoms; i++) {
+		for (int j = i + 1; j < *pAtoms; j++) {
 			fprintf(outputFile, "%d ", matrix(i, j));
 		}
 	}
@@ -254,7 +263,7 @@ void writeData(char* input) {
 	// write the formula to file
 	fprintf(outputFile, "%s\n", input);
 	// write the number of non-H atoms to file
-	fprintf(outputFile, "%d\n", numberOfAtoms);
+	fprintf(outputFile, "%d\n", *pAtoms);
 
 	//write each atom identifier in the correct order (order of internal ussage)
 	for (unsigned int i = 0; i < strlen(atomName); i++) {
@@ -278,7 +287,7 @@ void dfs(int start) {
 	if (matrix(start, start)) {
 
 		//search for the next adjacent node to start from (not on main diagonal)
-		for (int i = 0; i < numberOfAtoms; i++) {
+		for (int i = 0; i < *pAtoms; i++) {
 			//if vertex i has not been visited and there is an edge from start to i, do dfs
 			if (!visitedNodes[i] && matrix(start, i)) {
 				dfs(i);
@@ -293,7 +302,7 @@ void dfs(int start) {
 
 int checkConnectivity() {
 
-	visitedNodes = calloc(numberOfAtoms, sizeof(visitedNodes));
+	visitedNodes = calloc(*pAtoms, sizeof(visitedNodes));
 
 	if (visitedNodes) {
 
@@ -301,7 +310,7 @@ int checkConnectivity() {
 		dfs(0);
 
 		//check if all nodes have been visited
-		for (int i = 0; i < numberOfAtoms; i++) {
+		for (int i = 0; i < *pAtoms; i++) {
 			if (!visitedNodes[i]) {
 				free(visitedNodes);
 				return FALSE;
@@ -549,7 +558,7 @@ int* addElements(const int* components) {
 			elementCount[ELEMENTS[i] - 65] = components[ORGANIC_SUBSET[2 * i]] + components[ORGANIC_SUBSET[(2 * i) + 1]];
 		}
 
-		numberOfAtoms = 0;
+		*pAtoms = 0;
 		//count the number of non-H atoms
 		for (unsigned int i = 0; i < 26; i++) {
 
