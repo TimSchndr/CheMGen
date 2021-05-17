@@ -7,9 +7,8 @@
 
 // X stands for Chlorine
 // B stands for Bromine, *not* Boron
-#define ORGANIC_SUBSET "BbCcFfHhIiNnOoPpSsXx"
-#define ELEMENTS "BCFHINOPSX"
-
+#define ORGANIC_SUBSET "CcNnOoPpSsBbFfHhIiXx"
+#define ELEMENTS "CNOPSBFHIX"
 
 //general information
 int atomValency[26] = { 0 };
@@ -52,6 +51,9 @@ void main(int argc, char* argv[]) {
 		//get the components of the formula
 		components = getComponents(argv[1]);
 
+		//set valency of atoms
+		setAtomValency();
+
 		//get the number of bonds
 		numberOfBonds = *pAtoms - 1 + calcDoubleBounds(components);
 
@@ -68,11 +70,8 @@ void main(int argc, char* argv[]) {
 
 		if (adjacencyMatrix) {
 
-			//set valency of atoms
-			setAtomValency();
 			//start filling matrix
 			makeBond(0, 1, 0);
-
 		}
 		else {
 			fprintf(stderr, "Allocation failed for adjacencyMatrix in main().");
@@ -142,11 +141,11 @@ char* defineAtomName() {
 		int index = 0;
 
 		//for all components not 'H' fill the array with the atom names
-		for (unsigned int i = 0; i < 26; i++) {
-			for (int j = 0; j < components[i]; j++) {
+		for (unsigned int i = 0; i < strlen(ELEMENTS); i++) {
+			for (int j = 0; j < components[ELEMENTS[i] - 65]; j++) {
 
-				if (i + 65 != 'H') {
-					atomList[index] = i + 65;
+				if (ELEMENTS[i] != 'H') {
+					atomList[index] = ELEMENTS[i];
 					index++;
 				}
 			}
@@ -209,6 +208,7 @@ void makeBond(int i, int j, int bondSum) {
 
 	//check if the end of the matrix is reached
 	if ((i * *pAtoms + j) >= (*pAtoms * *pAtoms)) {
+
 		return;
 	}
 
@@ -464,8 +464,6 @@ int* getComponents(char* formula) {
 	}
 	free(alphabet);
 
-
-
 	//add upper_case and lower_case counts to one variable
 	int* elementCounts = addElements(amount);
 
@@ -482,11 +480,6 @@ int* getComponents(char* formula) {
 
 int calcDoubleBounds(const int* elementCounts) {
 
-
-
-
-
-
 	//total number of halogens in the input
 	int halogenSum = 0;
 	char halogens[5] = "BFIX";
@@ -495,13 +488,43 @@ int calcDoubleBounds(const int* elementCounts) {
 		halogenSum += elementCounts[halogens[i] - 65];
 	}
 
+	//total number of two-valent atoms
+	int twoVal = 0;
+	char twoValAtoms[4] = "OPS";
+
+	for (unsigned int i = 0; i < strlen(twoValAtoms); i++) {
+		twoVal += elementCounts[twoValAtoms[i] - 65];
+	}
+
+	//check if only one structural atom (C or N) exists
+	if (elementCounts['C' - 65] == 1 && elementCounts['N' - 65] == 0 && !twoVal) {
+
+		//check if the atom is saturated
+		if (halogenSum + elementCounts['H' - 65] != getAtomValency('C')) {
+
+			fprintf(stderr, "The carbon atom was not saturated");
+			freeAll();
+			exit(0);
+		}
+	}
+	else if (elementCounts['C' - 65] == 0 && elementCounts['N' - 65] == 1 && !twoVal) {
+
+		//check if the atom is saturated
+		if (halogenSum + elementCounts['H' - 65] != getAtomValency('N')) {
+
+			fprintf(stderr, "The nitrogen atom was not saturated.");
+			freeAll();
+			exit(0);
+		}
+	}
+
 	//the number of H, N and halogens combined according to DBE formula
 	double negativeTerm = 0;
 	negativeTerm = 0.5 * ((double)elementCounts['H' - 65] - (double)elementCounts['N' - 65] + (double)halogenSum);
 	int dbe = 0;
 
 	//check if negativeTerm is an int
-	if (negativeTerm == (int)negativeTerm && elementCounts['H' - 65] > 0) {
+	if (negativeTerm == (int)negativeTerm) {
 
 		dbe = elementCounts['C' - 65] + 1 - negativeTerm;
 	}
