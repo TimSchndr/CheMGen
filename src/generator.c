@@ -212,8 +212,6 @@ void makeBond(int i, int j, int bondSum) {
 		return;
 	}
 
-	int rememberValue = matrix(i, j);
-
 	//add a new bond between i and j
 	for (int b = 0; b <= MIN_VALUE(getAtomValency(atomName[i]), getAtomValency(atomName[j])); b++) {
 
@@ -231,7 +229,7 @@ void makeBond(int i, int j, int bondSum) {
 		matrix(j, j) -= b;
 	}
 
-	matrix(i, j) = rememberValue;
+	matrix(i, j) = 0;
 
 }
 
