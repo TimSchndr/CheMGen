@@ -14,14 +14,12 @@
 int atomValency[26] = { 0 };
 
 int* components;
-int numberOfAtoms;
-int* pAtoms = &numberOfAtoms;
+int numberOfnonHAtoms;
+int atomCount;
 int numberOfBonds;
-int* pBonds = &numberOfBonds;
 char* atomName;
 
 int counter = 0;
-int* pCounter = &counter;
 
 //the graph properties
 //this is a symmetric Laplacian matrix
@@ -55,18 +53,18 @@ void main(int argc, char* argv[]) {
 		setAtomValency();
 
 		//get the number of bonds
-		numberOfBonds = *pAtoms - 1 + calcDoubleBounds(components);
+		numberOfBonds = numberOfnonHAtoms - 1 + calcDoubleBounds(components);
 
 		//define list of atoms
 		atomName = defineAtomName();
 
-		printf("number of atoms (non-H): %d\nnumber of bonds: %d\n\n", *pAtoms, *pBonds);
+		//printf("number of atoms (non-H): %d\nnumber of bonds: %d\n\n", numberOfnonHAtoms, numberOfBonds);
 
 		//write general data to file
-		writeData(argv[1]);
+			//writeData(argv[1]);
 
 		//allocation of adjacencyMatrix
-		adjacencyMatrix = calloc(*pAtoms * *pAtoms, sizeof(adjacencyMatrix));
+		adjacencyMatrix = calloc(numberOfnonHAtoms * numberOfnonHAtoms, sizeof(adjacencyMatrix));
 
 		if (adjacencyMatrix) {
 
@@ -83,8 +81,7 @@ void main(int argc, char* argv[]) {
 		if (outputFile != stdout) {
 			fclose(outputFile);
 		}
-
-		printf("number of valid graphs: %d\n", *pCounter);
+		printf("number of valid graphs: %d\n", counter);
 	}
 	else {
 		fprintf(stderr, "Could not open the specified file.");
@@ -132,10 +129,9 @@ int getAtomValency(char atom) {
 *
 * return - the pointer to the array with the atom names
 */
-
 char* defineAtomName() {
 
-	char* atomList = calloc(*pAtoms + 1, sizeof(atomList));
+	char* atomList = calloc(numberOfnonHAtoms + 1, sizeof(atomList));
 
 	if (atomList) {
 		int index = 0;
@@ -168,12 +164,11 @@ char* defineAtomName() {
 */
 int checkAtoms() {
 
-	for (int i = 0; i < *pAtoms; i++) {
+	for (int i = 0; i < numberOfnonHAtoms; i++) {
 		if (matrix(i, i) > getAtomValency(atomName[i])) {
 			return FALSE;
 		}
 	}
-
 	return TRUE;
 }
 
@@ -186,7 +181,7 @@ int checkAtoms() {
 */
 void makeBond(int i, int j, int bondSum) {
 
-	if (*pBonds == bondSum) {
+	if (numberOfBonds == bondSum) {
 		// all bonds have been placed
 
 		if (checkAtoms()) {
@@ -196,7 +191,7 @@ void makeBond(int i, int j, int bondSum) {
 				//check if the graph is connected
 
 				//save the graph
-				saveGraph();
+				writeSDFformat();
 
 				counter++;
 				return;
@@ -207,8 +202,7 @@ void makeBond(int i, int j, int bondSum) {
 	}
 
 	//check if the end of the matrix is reached
-	if ((i * *pAtoms + j) >= (*pAtoms * *pAtoms)) {
-
+	if ((i * numberOfnonHAtoms + j) >= (numberOfnonHAtoms * numberOfnonHAtoms)) {
 		return;
 	}
 
@@ -219,7 +213,7 @@ void makeBond(int i, int j, int bondSum) {
 		matrix(i, i) += b;
 		matrix(j, j) += b;
 
-		if (j < *pAtoms - 1) {
+		if (j < numberOfnonHAtoms - 1) {
 			makeBond(i, j + 1, bondSum + b);
 		}
 		else {
@@ -237,16 +231,14 @@ void makeBond(int i, int j, int bondSum) {
 * A method that appends a graph to the file.
 * The matrix is written as upper triangle matrix without the diagonal.
 */
-
 void saveGraph() {
 
-	for (int i = 0; i < *pAtoms; i++) {
-		for (int j = i + 1; j < *pAtoms; j++) {
+	for (int i = 0; i < numberOfnonHAtoms; i++) {
+		for (int j = i + 1; j < numberOfnonHAtoms; j++) {
 			fprintf(outputFile, "%d ", matrix(i, j));
 		}
 	}
 	fprintf(outputFile, "\n");
-
 }
 
 /*
@@ -255,13 +247,12 @@ void saveGraph() {
 *
 * char* input - the formula read from cmd
 */
-
 void writeData(char* input) {
 
 	// write the formula to file
 	fprintf(outputFile, "%s\n", input);
 	// write the number of non-H atoms to file
-	fprintf(outputFile, "%d\n", *pAtoms);
+	fprintf(outputFile, "%d\n", numberOfnonHAtoms);
 
 	//write each atom identifier in the correct order (order of internal ussage)
 	for (unsigned int i = 0; i < strlen(atomName); i++) {
@@ -269,7 +260,6 @@ void writeData(char* input) {
 	}
 
 	fprintf(outputFile, "\n");
-
 }
 
 /*
@@ -285,7 +275,7 @@ void dfs(int start) {
 	if (matrix(start, start)) {
 
 		//search for the next adjacent node to start from (not on main diagonal)
-		for (int i = 0; i < *pAtoms; i++) {
+		for (int i = 0; i < numberOfnonHAtoms; i++) {
 			//if vertex i has not been visited and there is an edge from start to i, do dfs
 			if (!visitedNodes[i] && matrix(start, i)) {
 				dfs(i);
@@ -297,10 +287,9 @@ void dfs(int start) {
 /*
 * A method that checks if the underlying graph is connected.
 */
-
 int checkConnectivity() {
 
-	visitedNodes = calloc(*pAtoms, sizeof(visitedNodes));
+	visitedNodes = calloc(numberOfnonHAtoms, sizeof(visitedNodes));
 
 	if (visitedNodes) {
 
@@ -308,7 +297,7 @@ int checkConnectivity() {
 		dfs(0);
 
 		//check if all nodes have been visited
-		for (int i = 0; i < *pAtoms; i++) {
+		for (int i = 0; i < numberOfnonHAtoms; i++) {
 			if (!visitedNodes[i]) {
 				free(visitedNodes);
 				return FALSE;
@@ -351,6 +340,59 @@ int getMinimumValue(int a, int b, int c) {
 }
 
 /*
+* This method writes the underlying chemical graph
+* to the outputFile in Molfile format.
+* To meet the format, the hydrogens are enumerated and
+* attached to one specific atom.
+*/
+void writeSDFformat() {
+
+	fprintf(outputFile, "\nCheMGen 1.0\n\n");
+
+	//Count Line Block
+	fprintf(outputFile, "%3d%3d  0  0  0  0            999 V2000\n", atomCount, numberOfBonds);
+	//Atom Block
+
+	for (int i = 0; i < numberOfnonHAtoms; i++) {
+		//write non-H atoms to file
+		fprintf(outputFile, "    0.0000    0.0000    0.0000 %c  0  0  0  0  0  0  0  0  0  0  0  0\n", atomName[i]);
+	}
+
+	for (int i = numberOfnonHAtoms + 1; i <= atomCount; i++) {
+		//write all H atoms to file
+		fprintf(outputFile, "    0.0000    0.0000    0.0000 %s  0  0  0  0  0  0  0  0  0  0  0  0\n", "H");
+	}
+
+	//Bond Block for non-H atoms
+
+	for (int i = 0; i < numberOfnonHAtoms; i++) {
+		for (int j = i + 1; j < numberOfnonHAtoms; j++) {
+
+			//if there is a bond, report to file
+			if (matrix(i, j)) {
+				fprintf(outputFile, "%3d%3d%3d  0  0  0  0\n", i + 1, j + 1, matrix(i, j));
+			}
+		}
+	}
+
+	//Bond Block for H atoms
+
+	//represents the current H-atom number
+	int hCounter = numberOfnonHAtoms + 2;
+
+	for (int i = 0; i < numberOfnonHAtoms; i++) {
+		for (int b = matrix(i, i); b < getAtomValency(atomName[i]); b++) {
+			//parameters: non-H atom, H-atom, bond multiplicity
+			fprintf(outputFile, "%3d%3d%3d  0  0  0  0\n", i + 1, hCounter, 1);
+
+			hCounter++;
+		}
+	}
+	//End of File
+	fprintf(outputFile, "M  END\n$$$$\n");
+}
+
+/*
 * Free all global variables.
 * This method is called when an error occured during run.
 */
@@ -371,6 +413,8 @@ int freeAll() {
 
 	return 1;
 }
+
+
 /************************************************************************************************************/
 /******************************************* Begin of Formula Reader ****************************************/
 /************************************************************************************************************/
@@ -380,9 +424,6 @@ int freeAll() {
 *
 * return - an array containing the count for each letter in the input
 */
-
-// TODO case abfangen, dass Nummer an Pos 0 oder Char nicht in Alphabet
-
 int* getComponents(char* formula) {
 
 	int amount[256] = { 0 };
@@ -475,7 +516,6 @@ int* getComponents(char* formula) {
 *
 * return - the number of DBE for given input
 */
-
 int calcDoubleBounds(const int* elementCounts) {
 
 	//total number of halogens in the input
@@ -541,7 +581,6 @@ int calcDoubleBounds(const int* elementCounts) {
 *
 * return - an array filled with 1 for each character in the string
 */
-
 int* defineAlphabet(char* string) {
 
 	int* alphabet = calloc(256, sizeof * alphabet);
@@ -570,7 +609,6 @@ int* defineAlphabet(char* string) {
 *
 * return - an array containing the total number of each character in the input, ignoring case
 */
-
 int* addElements(const int* components) {
 
 	//for molecular formulas only A-Z is used, 26 characters in total
@@ -583,14 +621,19 @@ int* addElements(const int* components) {
 			elementCount[ELEMENTS[i] - 65] = components[ORGANIC_SUBSET[2 * i]] + components[ORGANIC_SUBSET[(2 * i) + 1]];
 		}
 
-		*pAtoms = 0;
+		atomCount = 0;
+		numberOfnonHAtoms = 0;
+
 		//count the number of non-H atoms
 		for (unsigned int i = 0; i < 26; i++) {
 
-			if (i + 65 != 'H')
-				numberOfAtoms += elementCount[i];
-		}
+			atomCount += elementCount[i];
 
+			if (i + 65 != 'H') {
+				numberOfnonHAtoms += elementCount[i];
+			}
+
+		}
 		return elementCount;
 	}
 	else {
