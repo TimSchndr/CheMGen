@@ -181,6 +181,10 @@ int checkAtoms() {
 */
 void makeBond(int i, int j, int bondSum) {
 
+	if (bondSum > numberOfBonds) {
+		return;
+	}
+
 	if (numberOfBonds == bondSum) {
 		// all bonds have been placed
 
@@ -378,7 +382,7 @@ void writeSDFformat() {
 	//Bond Block for H atoms
 
 	//represents the current H-atom number
-	int hCounter = numberOfnonHAtoms + 2;
+	int hCounter = numberOfnonHAtoms + 1;
 
 	for (int i = 0; i < numberOfnonHAtoms; i++) {
 		for (int b = matrix(i, i); b < getAtomValency(atomName[i]); b++) {
