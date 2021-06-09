@@ -1,4 +1,4 @@
-#define matrix(i, j) (adjacencyMatrix[i * numberOfnonHAtoms + j])
+#define matrix(i, j) (adjacencyMatrix[i * numberOfAtoms + j])
 #define MIN_VALUE(a, b) ((a) < (b) ? a : b)
 #define TRUE 1
 #define FALSE 0
@@ -13,7 +13,6 @@ void writeData(char* input);
 void dfs(int start);
 int checkConnectivity();
 int getMinimumValue(int a, int b, int c);
-void writeSDFformat();
 int freeAll();
 
 int* getComponents(char* formula);
