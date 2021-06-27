@@ -10,6 +10,9 @@
 #define ORGANIC_SUBSET "CcNnOoPpSsBbFfHhIiXx"
 #define ELEMENTS "CNOPSBFHIX"
 
+// debug option to specify if partitioning is required
+#define partition 0
+
 //general information
 int atomValency[26] = { 0 };
 
@@ -17,6 +20,7 @@ int* components;
 int numberOfnonHAtoms;
 int atomCount;
 int numberOfBonds;
+int numberOfDBE;
 char* atomName;
 int* currentPartition;
 
@@ -54,8 +58,11 @@ void main(int argc, char* argv[]) {
 		//set valency of atoms
 		setAtomValency();
 
+		//get the number of DBE
+		numberOfDBE = calcDoubleBounds(components);
+
 		//get the number of bonds
-		numberOfBonds = numberOfnonHAtoms - 1 + calcDoubleBounds(components);
+		numberOfBonds = numberOfnonHAtoms - 1 + numberOfDBE;
 
 		//define list of atoms
 		atomName = defineAtomName();
@@ -67,6 +74,8 @@ void main(int argc, char* argv[]) {
 
 			int numberOfH = atomCount - numberOfnonHAtoms;
 
+#if partition
+			//if partitioning is required, perform
 			while (getNextPartition(numberOfH)) {
 				if (checkAtomPartition(numberOfH)) {
 					printf("partition:\n");
@@ -74,10 +83,13 @@ void main(int argc, char* argv[]) {
 						printf("%d", currentPartition[i]);
 					}
 					printf("\n");
-
 					makeBond(0, 1, 0);
 				}
 			}
+#else
+			makeBond(0, 1, 0);
+
+#endif
 		}
 		else {
 			fprintf(stderr, "Allocation failed for adjacencyMatrix in main().");
@@ -175,13 +187,23 @@ int checkAtoms() {
 
 	for (int i = 0; i < numberOfnonHAtoms; i++) {
 
+#if partition
+		//check atom valency with respect to partition
 		if (getAtomValency(atomName[i]) - currentPartition[i] != matrix(i, i)) {
 			return FALSE;
 		}
 	}
+#else
+		// check the atom valency without checking the partition
+		if (getAtomValency(atomName[i]) < matrix(i, i)) {
+			return FALSE;
+		}
+	}
+#endif
 
 	return TRUE;
 }
+
 
 /*
 * A method that fills the adjacencyMatrix with bonds recursively.
@@ -206,7 +228,7 @@ void makeBond(int i, int j, int bondSum) {
 				//check if the graph is connected
 
 				//save the graph
-				writeSDFformat();				
+				writeSDFformat();
 				counter++;
 
 				return;
@@ -570,12 +592,23 @@ int getMinimumValue(int a, int b, int c) {
 */
 void writeSDFformat() {
 
+	//calculate the number of internal connections
+	int connections = 0;
+
+	for (int i = 0; i < numberOfnonHAtoms; i++) {
+		for (int j = i + 1; j < numberOfnonHAtoms; j++) {
+			if (matrix(i, j)) {
+				connections++;
+			}
+		}
+	}
+
 	fprintf(outputFile, "\nCheMGen 1.0\n\n");
 
 	//Count Line Block
-	fprintf(outputFile, "%3d%3d  0  0  0  0            999 V2000\n", atomCount, numberOfBonds);
-	//Atom Block
+	fprintf(outputFile, "%3d%3d  0  0  0  0            999 V2000\n", atomCount, connections + atomCount - numberOfnonHAtoms);
 
+	//Atom Block
 	for (int i = 0; i < numberOfnonHAtoms; i++) {
 		//write non-H atoms to file
 		fprintf(outputFile, "    0.0000    0.0000    0.0000 %c  0  0  0  0  0  0  0  0  0  0  0  0\n", atomName[i]);
